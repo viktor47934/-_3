@@ -1,0 +1,108 @@
+from dataclasses import dataclass
+from typing import List, Optional, Dict, Union
+from datetime import datetime
+
+@dataclass
+class MediaObject:
+    """Объект мультимедиа с параметрами и датой изменения."""
+    name: str
+    date_modified: datetime
+    media_type: str  # 'audio', 'video', 'image'
+    params: Dict[str, Union[int, str]]
+
+def parse_date(date_str: str) -> datetime:
+    """Парсинг строки в формат datetime (например, '2024-06-20')."""
+    return datetime.strptime(date_str, "%Y-%m-%d")
+
+class MediaContainer:
+    def __init__(self):
+        self.objects: List[MediaObject] = []
+
+    def add_object(self, name: str, date_str: str, media_type: str, params: Dict[str, Union[int, str]]) -> None:
+        """Добавить объект в контейнер."""
+        date_modified = parse_date(date_str)
+        self.objects.append(MediaObject(name, date_modified, media_type, params))
+
+    def remove_objects(self, condition: str) -> None:
+        """Удалить объекты по условию (например, 'audio,bitrate>128')."""
+        self.objects = [
+            obj for obj in self.objects
+            if not self._matches_condition(obj, condition)
+        ]
+
+    def _matches_condition(self, obj: MediaObject, condition: str) -> bool:
+        """Проверка, удовлетворяет ли объект условию удаления."""
+        parts = condition.split(',')
+        for part in parts:
+            key_value = part.split('>') if '>' in part else part.split('<')
+            if len(key_value) == 2:
+                key, op_value = key_value
+                op_value = int(op_value)  # Преобразуем в int для сравнения
+                param_value = obj.params.get(key)
+                if param_value is None:
+                    return False
+                if '>' in part and param_value <= op_value:
+                    return False
+                if '<' in part and param_value >= op_value:
+                    return False
+        return False
+
+    def print_objects(self) -> None:
+        """Вывести содержимое контейнера."""
+        for obj in self.objects:
+            print(f"Файл: {obj.name}, Тип: {obj.media_type}, Дата изменения: {obj.date_modified.strftime('%Y-%m-%d')}")
+            print("Параметры:", obj.params)
+            print("-" * 30)
+
+def process_command(command: str, container: MediaContainer) -> None:
+    """Обработка команд ADD, REM, PRINT."""
+    parts = command.split()
+    cmd = parts[0]
+
+    if cmd == "ADD":
+        if len(parts) < 4:
+            print("Ошибка: не хватает параметров для ADD")
+            return
+        name = parts[1]
+        date_str = parts[2]
+        media_type = parts[3].lower()  # 'audio', 'video', 'image'
+        params = {}
+
+        # Парсинг параметров (например, "bitrate=128,frames=24")
+        params_str = ' '.join(parts[4:])
+        for param in params_str.split(','):
+            k, v = param.split('=')
+            params[k] = int(v) if (media_type == 'audio' and k == 'bitrate') or (media_type in ['video', 'image'] and k in ['width', 'height', 'fps']) else v
+
+        container.add_object(name, date_str, media_type, params)
+
+    elif cmd == "REM":
+        if len(parts) < 2:
+            print("Ошибка: не хватает условия для REM")
+            return
+        condition = ' '.join(parts[1:])
+        container.remove_objects(condition)
+
+    elif cmd == "PRINT":
+        container.print_objects()
+
+    else:
+        print(f"Неизвестная команда: {cmd}")
+
+def main():
+    container = MediaContainer()
+    commands = [
+        "ADD song.mp3 2024-06-20 audio bitrate=128,duration=180",
+        "ADD video.mp4 2024-06-19 video width=1920,height=1080,fps=30",
+        "ADD photo.jpg 2024-06-21 image width=1280,height=720,format=jpeg",
+        "REM audio,bitrate>100",  # Удалит song.mp3 (bitrate=128)
+        "PRINT"
+    ]
+
+    for cmd in commands:
+        print(f"Выполняется команда: {cmd}")
+        process_command(cmd, container)
+        print()
+
+if __name__ == "__main__":
+    main()
