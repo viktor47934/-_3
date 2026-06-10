@@ -1,0 +1,8 @@
+commands = [
+    "ADD photo1.jpg 2024-05-15 image resolution=1920x1080",
+    "ADD song.mp3 2024-06-10 audio bitrate=320",
+    "PRINT",
+    "ADD video.mp4 2024-06-15 video codec=h264",
+    "CLEAR",
+    "PRINT"  
+]
